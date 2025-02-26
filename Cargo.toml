@@ -12,10 +12,12 @@ tokio = { version = "1.36", features = ["full"] }  # For async runtime
 chrono = { version = "0.4", features = ["serde"] }  # For timestamp handling
 uuid = { version = "1.7", features = ["v4", "serde"] }  # For unique IDs
 ctrlc = "3.4"  # For signal handling
-reqwest = { version = "0.11", features = ["json"] }  # For HTTP requests
+reqwest = { version = "0.11", features = ["json", "stream"] }  # For HTTP requests
 log = "0.4"  # For logging
 env_logger = "0.10"  # For logging configuration
 dotenv = "0.15.0"  # For loading .env files
+futures-util = "0.3"  # For working with futures
+tempfile = "3.8"  # For temporary files
 
 [profile.release]
 opt-level = 3

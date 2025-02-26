@@ -28,4 +28,7 @@ node-controller.log
 # Temporary files
 *.tmp
 *.temp
+
+# Nested repository
+/node-controller-rust/
 ``` 

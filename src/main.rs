@@ -1,5 +1,6 @@
 mod metrics;
 mod api;
+mod updater;
 
 use anyhow::Result;
 use metrics::{CpuCollector, NetworkCollector, StorageCollector, SystemInfoCollector};
@@ -12,7 +13,10 @@ use serde_json::json;
 use api::ApiClient;
 use log::{info, error, warn, debug};
 use std::env;
+use std::str::FromStr;
 use dotenv::dotenv;
+use std::path::PathBuf;
+use updater::{UpdateManager, UpdateConfig, UpdateChannel, Version};
 
 const SERVER_UPDATE_INTERVAL: Duration = Duration::from_secs(5);
 
@@ -47,6 +51,62 @@ async fn main() -> Result<()> {
             None
         }
     };
+
+    // Initialize the update manager
+    let current_version = updater::Version::from_cargo_toml()
+        .unwrap_or_else(|_| {
+            warn!("Could not determine current version from Cargo.toml, using 0.1.0");
+            Version::from_str("0.1.0").unwrap()
+        });
+    
+    info!("Current version: {}", current_version);
+    
+    // Configure the update manager
+    let update_config = UpdateConfig {
+        check_interval_mins: env::var("UPDATE_CHECK_INTERVAL_MINS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(60), // Default: check every hour
+        
+        channel: match env::var("UPDATE_CHANNEL").as_deref() {
+            Ok("beta") => UpdateChannel::Beta,
+            Ok("nightly") => UpdateChannel::Nightly,
+            Ok(custom) if !custom.is_empty() => UpdateChannel::Custom(custom.to_string()),
+            _ => UpdateChannel::Stable, // Default to stable
+        },
+        
+        auto_update: env::var("AUTO_UPDATE")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(false), // Default: notify only
+        
+        repository: env::var("UPDATE_REPOSITORY")
+            .unwrap_or_else(|_| "a14a-org/node-controller-rust".to_string()),
+            
+        update_dir: PathBuf::from(env::var("UPDATE_DIR")
+            .unwrap_or_else(|_| "/Library/NodeController/updates".to_string())),
+            
+        max_backups: env::var("MAX_BACKUPS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(3), // Default: keep 3 backups
+            
+        post_update_commands: env::var("POST_UPDATE_COMMANDS")
+            .map(|cmds| cmds.split(';').map(ToString::to_string).collect())
+            .unwrap_or_default(),
+    };
+    
+    info!("Update configuration: channel={:?}, auto_update={}, check_interval={}min",
+          update_config.channel,
+          update_config.auto_update,
+          update_config.check_interval_mins);
+    
+    // Create and start the update manager
+    let mut update_manager = UpdateManager::new(update_config, current_version);
+    match update_manager.start().await {
+        Ok(_) => info!("Update manager started successfully"),
+        Err(e) => warn!("Failed to start update manager: {}", e),
+    }
 
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();
