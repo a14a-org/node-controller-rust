@@ -18,6 +18,7 @@ env_logger = "0.10"  # For logging configuration
 dotenv = "0.15.0"  # For loading .env files
 futures-util = "0.3"  # For working with futures
 tempfile = "3.8"  # For temporary files
+dirs = "5.0"  # For finding user directories
 
 [profile.release]
 opt-level = 3

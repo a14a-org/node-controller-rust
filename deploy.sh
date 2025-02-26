@@ -11,6 +11,11 @@ ENV_FILE=".env"
 ENV_EXAMPLE=".env.example"
 MONITOR_SCRIPT="node-monitor"
 
+# Create user update directory
+USER_UPDATE_DIR="$HOME/Library/Application Support/NodeController/updates"
+mkdir -p "$USER_UPDATE_DIR"
+chmod -R 755 "$USER_UPDATE_DIR"
+
 # Print colored output
 print_green() {
     echo -e "\033[0;32m$1\033[0m"
@@ -128,6 +133,7 @@ AUTO_UPDATE=${AUTO_UPDATE}
 UPDATE_CHANNEL=${UPDATE_CHANNEL}
 UPDATE_CHECK_INTERVAL=${UPDATE_INTERVAL}
 UPDATE_REPOSITORY=${UPDATE_REPO}
+UPDATE_DIR=${USER_UPDATE_DIR}
 EOF
     print_green "✓ .env file created successfully!"
 else
@@ -184,6 +190,7 @@ AUTO_UPDATE=${AUTO_UPDATE}
 UPDATE_CHANNEL=${UPDATE_CHANNEL}
 UPDATE_CHECK_INTERVAL=${UPDATE_INTERVAL}
 UPDATE_REPOSITORY=${UPDATE_REPO}
+UPDATE_DIR=${USER_UPDATE_DIR}
 EOF
         print_green "✓ .env file updated successfully!"
     fi

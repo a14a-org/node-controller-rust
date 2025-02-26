@@ -21,7 +21,35 @@ A lightweight system monitoring agent written in Rust for Mac clusters. This app
 - macOS 11.0 or higher (Apple Silicon or Intel)
 - Internet connection for API communication
 
-## Quick Start
+## Installation Options
+
+The Node Controller can be installed and run in two different ways:
+
+### Option 1: System Installation (Recommended for Production)
+
+The system installation sets up Node Controller as a system service that starts automatically on boot and runs with the necessary privileges.
+
+1. Clone the repository:
+   ```
+   git clone https://github.com/a14a-org/node-controller-rust.git
+   cd node-controller-rust
+   ```
+
+2. Run the installation script with sudo:
+   ```
+   sudo ./install.sh
+   ```
+
+The `install.sh` script:
+- Installs the application as a system service
+- Configures it to run at system startup
+- Creates the necessary directories with appropriate permissions
+- Sets up automatic updates that don't require elevated privileges
+- Requires sudo only during installation (one-time)
+
+### Option 2: Development/Testing Deployment
+
+For development or testing purposes, you can use the deployment script which runs the application in the current directory.
 
 1. Clone the repository:
    ```
@@ -39,12 +67,16 @@ A lightweight system monitoring agent written in Rust for Mac clusters. This app
    UPDATE_CHECK_INTERVAL=60
    ```
 
-3. Build and run using the deployment script:
+3. Run the deployment script:
    ```
    ./deploy.sh
    ```
 
-The script will build the application in release mode and start it in the background with proper logging.
+The `deploy.sh` script:
+- Builds the application in the current directory
+- Runs it without installing as a system service
+- Is ideal for testing and development
+- Doesn't require sudo privileges
 
 ## Manual Deployment
 
@@ -69,10 +101,11 @@ The application uses environment variables for configuration:
 | MONITORING_API_URL | URL of the monitoring API | http://localhost:3000 |
 | MONITORING_API_KEY | API key for authentication | dev-api-key |
 | RUST_LOG | Logging level (error, warn, info, debug, trace) | info |
-| AUTO_UPDATE | Enable automatic updates from GitHub releases | false |
+| AUTO_UPDATE | Enable automatic updates from GitHub releases | true |
 | UPDATE_CHANNEL | Update channel to use (stable, beta, nightly) | stable |
 | UPDATE_CHECK_INTERVAL | How often to check for updates (minutes) | 60 |
 | UPDATE_REPOSITORY | GitHub repository for updates | a14a-org/node-controller-rust |
+| UPDATE_DIR | Directory for updates and backups | ~/Library/Application Support/NodeController/updates |
 
 ## Auto-Update System
 
@@ -83,6 +116,7 @@ The node controller includes an automatic update system that can check for and a
 - Health checks ensure the update was successful
 - Automatic rollback if an update fails
 - Configurable update channels (stable, beta, nightly)
+- Updates are stored in the user's Application Support directory and don't require elevated privileges
 
 To create a new release that will be detected by clients:
 
@@ -96,8 +130,8 @@ For deploying across a Mac cluster:
 
 1. Ensure Rust is installed on each node
 2. Copy the application to each node
-3. Configure the `.env` file with appropriate API credentials
-4. Run the deployment script on each node
+3. Use `sudo ./install.sh` to install the service on each node
+4. Provide API credentials during installation
 
 For automated deployment, consider using a configuration management tool like Ansible.
 

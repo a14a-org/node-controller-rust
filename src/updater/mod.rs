@@ -19,6 +19,8 @@ use tokio::sync::{mpsc, Mutex};
 use std::time::Duration;
 use log::{info, error, debug};
 use anyhow::{Result, Context};
+use std::env;
+use dirs;
 
 /// Configuration for the update system
 #[derive(Debug, Clone)]
@@ -50,12 +52,17 @@ pub struct UpdateConfig {
 
 impl Default for UpdateConfig {
     fn default() -> Self {
+        // Use the user's Application Support directory by default
+        let default_update_dir = dirs::home_dir()
+            .map(|home| home.join("Library/Application Support/NodeController/updates"))
+            .unwrap_or_else(|| PathBuf::from("./temp-updates"));
+            
         Self {
             check_interval_mins: 60, // Check every hour by default
             channel: UpdateChannel::Stable,
             auto_update: false,      // Default to notify-only for safety
             repository: "a14a-org/node-controller-rust".to_string(),
-            update_dir: PathBuf::from("/Library/NodeController/updates"),
+            update_dir: default_update_dir,
             max_backups: 3,
             post_update_commands: vec![],
             health_check_timeout: Duration::from_secs(30),

@@ -17,6 +17,7 @@ use std::str::FromStr;
 use dotenv::dotenv;
 use std::path::PathBuf;
 use updater::{UpdateManager, UpdateConfig, UpdateChannel, Version};
+use dirs;
 
 const SERVER_UPDATE_INTERVAL: Duration = Duration::from_secs(5);
 
@@ -83,8 +84,14 @@ async fn main() -> Result<()> {
         repository: env::var("UPDATE_REPOSITORY")
             .unwrap_or_else(|_| "a14a-org/node-controller-rust".to_string()),
             
-        update_dir: PathBuf::from(env::var("UPDATE_DIR")
-            .unwrap_or_else(|_| "/Library/NodeController/updates".to_string())),
+        update_dir: env::var("UPDATE_DIR")
+            .map(PathBuf::from)
+            .unwrap_or_else(|_| {
+                // Use Application Support directory by default
+                dirs::home_dir()
+                    .map(|home| home.join("Library/Application Support/NodeController/updates"))
+                    .unwrap_or_else(|| PathBuf::from("./temp-updates"))
+            }),
             
         max_backups: env::var("MAX_BACKUPS")
             .ok()

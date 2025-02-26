@@ -18,6 +18,11 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
+# Identify current user (the user who ran sudo)
+REAL_USER=$(who am i | awk '{print $1}')
+REAL_USER_HOME=$(eval echo ~$REAL_USER)
+echo "Installing for user: $REAL_USER (home: $REAL_USER_HOME)"
+
 # Check for Apple Silicon
 if [ "$(uname -m)" != "arm64" ]; then
     echo -e "${RED}Error: This installer is only for Apple Silicon Macs${NC}"
@@ -97,12 +102,19 @@ if [ -d "/Applications/NodeController" ] || [ -f "/Library/LaunchDaemons/com.nod
     echo -e "${GREEN}Backup created at ${BACKUP_DIR}${NC}"
 fi
 
-# Create necessary directories
-echo "Creating directories..."
+# Create system directories (require root)
+echo "Creating system directories..."
 mkdir -p /Applications/NodeController/bin
 mkdir -p /Library/NodeController/config
 mkdir -p /Library/Logs/NodeController
 mkdir -p /usr/local/bin
+
+# Create user-writable directories for updates
+echo "Creating user directories for updates..."
+USER_UPDATE_DIR="$REAL_USER_HOME/Library/Application Support/NodeController/updates"
+mkdir -p "$USER_UPDATE_DIR"
+chown -R "$REAL_USER:staff" "$REAL_USER_HOME/Library/Application Support/NodeController"
+chmod -R 755 "$REAL_USER_HOME/Library/Application Support/NodeController"
 
 # Build the release binary
 echo "Building release binary..."
@@ -149,7 +161,7 @@ if [ -z "$API_KEY" ]; then
     exit 1
 fi
 
-# Create environment file
+# Create environment file with user update directory
 echo "Creating environment configuration..."
 cat > /Library/NodeController/config/.env << EOF
 # Monitoring API Configuration
@@ -158,6 +170,10 @@ MONITORING_API_KEY=${API_KEY}
 
 # Logging Configuration
 RUST_LOG=info
+
+# Update Configuration
+UPDATE_DIR=$USER_UPDATE_DIR
+AUTO_UPDATE=true
 EOF
 
 # Copy launch daemon
@@ -195,6 +211,7 @@ echo -e "${GREEN}Installation complete!${NC}"
 echo "The Node Controller service has been installed and started."
 echo "Logs can be found in /Library/Logs/NodeController/"
 echo "Configuration is at /Library/NodeController/config/config.json"
+echo "Updates will be stored in $USER_UPDATE_DIR"
 echo ""
 echo "You can now use the following commands:"
 echo "  node-monitor start    - Start the service"
