@@ -100,6 +100,9 @@ impl WifiInfo {
         }
     }
 
+    /// Calculate Signal-to-Noise Ratio (SNR)
+    /// Currently unused but may be used in future metrics collection
+    #[allow(dead_code)]
     pub fn snr(&self) -> i32 {
         self.rssi - self.noise
     }

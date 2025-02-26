@@ -29,6 +29,7 @@ pub struct Version {
 
 impl Version {
     /// Create a new version with the given components
+    #[allow(dead_code)]
     pub fn new(
         major: u32,
         minor: u32,
@@ -45,12 +46,14 @@ impl Version {
         }
     }
     
-    /// Check if this version is a pre-release
+    /// Check if this is a pre-release version
+    #[allow(dead_code)]
     pub fn is_pre_release(&self) -> bool {
         self.pre_release.is_some()
     }
     
     /// Check if this version has build metadata
+    #[allow(dead_code)]
     pub fn has_build_metadata(&self) -> bool {
         self.build.is_some()
     }

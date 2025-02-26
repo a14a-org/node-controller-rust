@@ -17,10 +17,6 @@ use std::str::FromStr;
 use dotenv::dotenv;
 use std::path::PathBuf;
 use updater::{UpdateManager, UpdateConfig, UpdateChannel, Version};
-use std::fs::File;
-use std::io::{BufReader, Read};
-use env_logger::{Builder, Env};
-use tokio::time;
 
 const SERVER_UPDATE_INTERVAL: Duration = Duration::from_secs(5);
 

@@ -8,7 +8,6 @@ use tokio::fs::{self, File};
 use tokio::io::AsyncWriteExt;
 use log::{debug, info, warn};
 use crate::updater::github::GithubReleaseInfo;
-use std::process::Command;
 use tokio::process::Command as TokioCommand;
 
 /// Download a release asset to the specified directory

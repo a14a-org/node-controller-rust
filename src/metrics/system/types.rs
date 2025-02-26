@@ -93,6 +93,9 @@ pub struct PowerInfo {
 }
 
 impl SystemInfo {
+    /// Create a new empty SystemInfo
+    /// This constructor is provided for flexibility but currently unused
+    #[allow(dead_code)]
     pub fn new() -> Self {
         Self {
             collected_at: Utc::now(),

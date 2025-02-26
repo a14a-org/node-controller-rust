@@ -10,7 +10,6 @@ use log::{debug, info, warn, error};
 use chrono::Utc;
 use crate::updater::UpdateConfig;
 use std::os::unix::fs::PermissionsExt;
-use std::pin::Pin;
 
 /// Location of the current application binary
 // For testing, use a local binary path

@@ -17,7 +17,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Mutex};
 use std::time::Duration;
-use log::{info, warn, error, debug};
+use log::{info, error, debug};
 use anyhow::{Result, Context};
 
 /// Configuration for the update system
@@ -109,6 +109,9 @@ pub struct UpdateManager {
     status: Arc<Mutex<UpdateStatus>>,
     update_tx: mpsc::Sender<UpdateCommand>,
     update_rx: Option<mpsc::Receiver<UpdateCommand>>,
+    /// Health check timeout duration
+    /// Currently unused but part of the configuration
+    #[allow(dead_code)]
     health_check_timeout: Duration,
 }
 
@@ -163,7 +166,7 @@ impl UpdateManager {
         config: UpdateConfig,
         current_version: Version,
         mut rx: mpsc::Receiver<UpdateCommand>,
-        tx: mpsc::Sender<UpdateCommand>,
+        _tx: mpsc::Sender<UpdateCommand>,
     ) {
         let mut update_interval = tokio::time::interval(
             Duration::from_secs(config.check_interval_mins * 60)
@@ -358,33 +361,43 @@ impl UpdateManager {
         Ok(())
     }
     
-    /// Get the current update status
+    /// Gets the current update status
+    /// This is currently unused but part of the public API
+    #[allow(dead_code)]
     pub async fn status(&self) -> UpdateStatus {
         self.status.lock().await.clone()
     }
     
-    /// Apply an available update
+    /// Manually triggers an update process with the provided release info
+    /// This is currently unused but part of the public API
+    #[allow(dead_code)]
     pub async fn trigger_update(&self, release: GithubReleaseInfo) -> Result<()> {
         self.update_tx.send(UpdateCommand::ApplyUpdate(release)).await
             .context("Failed to send apply update command")?;
         Ok(())
     }
     
-    /// Cancel a pending update
+    /// Cancels an in-progress update
+    /// This is currently unused but part of the public API
+    #[allow(dead_code)]
     pub async fn cancel_update(&self) -> Result<()> {
         self.update_tx.send(UpdateCommand::CancelUpdate).await
             .context("Failed to send cancel update command")?;
         Ok(())
     }
     
-    /// Shutdown the update manager
+    /// Gracefully shuts down the update manager
+    /// This is currently unused but part of the public API
+    #[allow(dead_code)]
     pub async fn shutdown(&self) -> Result<()> {
         self.update_tx.send(UpdateCommand::Shutdown).await
             .context("Failed to send shutdown command")?;
         Ok(())
     }
     
-    /// Configure the health check timeout
+    /// Sets the timeout duration for health checks
+    /// This is currently unused but part of the public API
+    #[allow(dead_code)]
     pub fn set_health_check_timeout(&mut self, timeout: Duration) {
         self.health_check_timeout = timeout;
     }

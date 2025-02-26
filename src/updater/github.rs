@@ -259,7 +259,7 @@ fn extract_sha256_from_body(body: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::str::FromStr;
+    
     
     #[test]
     fn test_extract_version_from_tag() {
