@@ -19,7 +19,6 @@ use tokio::sync::{mpsc, Mutex};
 use std::time::Duration;
 use log::{info, error, debug};
 use anyhow::{Result, Context};
-use std::env;
 use dirs;
 
 /// Configuration for the update system

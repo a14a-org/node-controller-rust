@@ -125,7 +125,7 @@ fi
 
 # Copy binary
 echo "Installing binary..."
-cp ./target/aarch64-apple-darwin/release/node-controller /Applications/NodeController/bin/
+cp ./target/aarch64-apple-darwin/release/node-controller-rust /Applications/NodeController/bin/node-controller
 chmod +x /Applications/NodeController/bin/node-controller
 
 # Copy and setup command-line tool

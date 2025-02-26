@@ -6,7 +6,7 @@ use anyhow::{Result, Context, anyhow};
 use std::path::{Path, PathBuf};
 use tokio::fs;
 use tokio::process::Command;
-use log::{debug, info, warn, error};
+use log::{debug, info, warn};
 use chrono::Utc;
 use crate::updater::UpdateConfig;
 use std::os::unix::fs::PermissionsExt;
