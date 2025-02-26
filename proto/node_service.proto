@@ -1,0 +1,47 @@
+syntax = "proto3";
+package node;
+
+// The Node service definition
+service NodeService {
+  // Simple ping-pong RPC
+  rpc Ping (PingRequest) returns (PongResponse);
+  
+  // Health check RPC
+  rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse);
+}
+
+// Ping request message
+message PingRequest {
+  string sender_id = 1;      // UUID of the sending node
+  string sender_name = 2;    // Name of the sending node
+  string message = 3;        // Optional message payload
+  int64 timestamp = 4;       // Timestamp of the ping (unix timestamp in ms)
+}
+
+// Pong response message
+message PongResponse {
+  string responder_id = 1;    // UUID of the responding node
+  string responder_name = 2;  // Name of the responding node
+  string message = 3;         // Optional response message
+  int64 request_timestamp = 4; // Original timestamp from the request
+  int64 response_timestamp = 5; // Timestamp of the response (unix timestamp in ms)
+}
+
+// Health check request message
+message HealthCheckRequest {
+  string sender_id = 1;       // UUID of the requesting node
+}
+
+// Health check response message
+message HealthCheckResponse {
+  string responder_id = 1;    // UUID of the responding node
+  string responder_name = 2;  // Name of the responding node
+  enum Status {
+    UNKNOWN = 0;
+    HEALTHY = 1;
+    DEGRADED = 2;
+    UNHEALTHY = 3;
+  }
+  Status status = 3;           // Health status of the node
+  map<string, string> metrics = 4; // Basic health metrics (optional)
+} 
