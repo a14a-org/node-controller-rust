@@ -1,0 +1,18 @@
+[Unit]
+Description=Node Controller Rust - System Monitoring Agent
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/node-controller-rust
+ExecStart=/opt/node-controller-rust/target/release/node-controller-rust
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/node-controller.log
+StandardError=append:/var/log/node-controller.log
+Environment="RUST_LOG=info"
+EnvironmentFile=/opt/node-controller-rust/.env
+
+[Install]
+WantedBy=multi-user.target 

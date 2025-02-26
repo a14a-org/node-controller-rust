@@ -1,0 +1,1048 @@
+openapi: 3.0.0
+info:
+  title: Mac Mini Cluster Monitoring API
+  version: 1.0.0
+  description: API for collecting and retrieving system metrics from Mac Mini cluster nodes
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+  - url: https://api.monitoring.cluster
+    description: Production server
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+  schemas:
+    SystemMetrics:
+      type: object
+      required:
+        - timestamp
+        - system
+        - cpu
+        - memory
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        system:
+          type: object
+          properties:
+            hostname:
+              type: string
+            platform:
+              type: string
+            release:
+              type: string
+            uptime:
+              type: number
+            loadavg:
+              type: array
+              items:
+                type: number
+            isAppleSilicon:
+              type: boolean
+            model:
+              type: string
+        cpu:
+          type: object
+          properties:
+            info:
+              type: object
+              properties:
+                manufacturer:
+                  type: string
+                brand:
+                  type: string
+                cores:
+                  type: object
+                  properties:
+                    physical:
+                      type: integer
+                    logical:
+                      type: integer
+                speed:
+                  type: object
+                  properties:
+                    base:
+                      type: number
+                    max:
+                      type: number
+                    current:
+                      type: array
+                      items:
+                        type: number
+            load:
+              type: object
+              properties:
+                current:
+                  type: number
+                user:
+                  type: number
+                system:
+                  type: number
+                cores:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      number:
+                        type: integer
+                      load:
+                        type: number
+                      user:
+                        type: number
+                      system:
+                        type: number
+            temperature:
+              type: object
+              properties:
+                main:
+                  type: number
+                cores:
+                  type: array
+                  items:
+                    type: number
+                max:
+                  type: number
+        memory:
+          type: object
+          properties:
+            total:
+              type: integer
+            used:
+              type: integer
+            active:
+              type: integer
+            available:
+              type: integer
+            swap:
+              type: object
+              properties:
+                total:
+                  type: integer
+                used:
+                  type: integer
+        gpu:
+          type: array
+          items:
+            type: object
+            properties:
+              model:
+                type: string
+              vendor:
+                type: string
+              vram:
+                type: object
+                properties:
+                  total:
+                    type: integer
+                  used:
+                    type: integer
+                  free:
+                    type: integer
+        network:
+          type: object
+          properties:
+            interfaces:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  type:
+                    type: string
+                  mac:
+                    type: string
+                  ipv4:
+                    type: string
+                  ipv6:
+                    type: string
+                  speed:
+                    type: integer
+                  status:
+                    type: string
+            stats:
+              type: array
+              items:
+                type: object
+                properties:
+                  interface:
+                    type: string
+                  rx_sec:
+                    type: number
+                  tx_sec:
+                    type: number
+                  rx_bytes:
+                    type: integer
+                  tx_bytes:
+                    type: integer
+                  errors:
+                    type: integer
+        thermal:
+          type: object
+          properties:
+            chassis:
+              type: object
+              properties:
+                temperature:
+                  type: number
+            battery:
+              type: object
+              properties:
+                temperature:
+                  type: number
+                health:
+                  type: number
+                cycleCount:
+                  type: integer
+                isCharging:
+                  type: boolean
+                voltage:
+                  type: number
+                percent:
+                  type: number
+            fan:
+              type: object
+              properties:
+                speed:
+                  type: integer
+            pressure:
+              type: string
+        storage:
+          type: object
+          properties:
+            filesystems:
+              type: array
+              items:
+                type: object
+                properties:
+                  fs:
+                    type: string
+                  type:
+                    type: string
+                  size:
+                    type: integer
+                  used:
+                    type: integer
+                  available:
+                    type: integer
+                  mount:
+                    type: string
+            io:
+              type: object
+              properties:
+                totalRead:
+                  type: integer
+                totalWrite:
+                  type: integer
+                readBytesPerSec:
+                  type: number
+                writeBytesPerSec:
+                  type: number
+        peripherals:
+          type: object
+          properties:
+            changes:
+              type: object
+              properties:
+                added:
+                  type: object
+                  properties:
+                    usb:
+                      type: array
+                      items:
+                        type: object
+                    bluetooth:
+                      type: array
+                      items:
+                        type: object
+                    audio:
+                      type: array
+                      items:
+                        type: object
+                removed:
+                  type: object
+                  properties:
+                    usb:
+                      type: array
+                      items:
+                        type: object
+                    bluetooth:
+                      type: array
+                      items:
+                        type: object
+                    audio:
+                      type: array
+                      items:
+                        type: object
+                changed:
+                  type: object
+                  properties:
+                    usb:
+                      type: array
+                      items:
+                        type: object
+                    bluetooth:
+                      type: array
+                      items:
+                        type: object
+                    audio:
+                      type: array
+                      items:
+                        type: object
+        appleSilicon:
+          type: object
+          properties:
+            chip:
+              type: object
+              properties:
+                model:
+                  type: string
+                cores:
+                  type: object
+                  properties:
+                    cpu:
+                      type: integer
+                    gpu:
+                      type: integer
+                    neural_engine:
+                      type: integer
+            power:
+              type: object
+              properties:
+                cpu_power:
+                  type: number
+                gpu_power:
+                  type: number
+                package_power:
+                  type: number
+            thermal:
+              type: object
+              properties:
+                levels:
+                  type: object
+                  properties:
+                    cpu:
+                      type: integer
+                    gpu:
+                      type: integer
+                    io:
+                      type: integer
+
+    NodeSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        hostname:
+          type: string
+        platform:
+          type: string
+        status:
+          type: string
+          enum: [online, offline, warning, critical]
+        firstSeen:
+          type: string
+          format: date-time
+        lastSeen:
+          type: string
+          format: date-time
+        metrics:
+          type: object
+          properties:
+            cpu:
+              type: number
+            memory:
+              type: number
+            storage:
+              type: number
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: integer
+        message:
+          type: string
+
+    Command:
+      type: object
+      required:
+        - id
+        - node_hostname
+        - type
+        - params
+        - status
+        - expires_at
+        - signature
+        - created_by
+      properties:
+        id:
+          type: string
+          format: uuid
+        node_hostname:
+          type: string
+        type:
+          type: string
+          enum: [START_OLLAMA, PULL_MODEL, LOAD_MODEL]
+        params:
+          type: object
+        status:
+          type: string
+          enum: [pending, processing, completed, failed, expired, cancelled]
+        priority:
+          type: integer
+          default: 0
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        signature:
+          type: string
+        error_message:
+          type: string
+          nullable: true
+        retries:
+          type: integer
+          default: 0
+        max_retries:
+          type: integer
+          default: 3
+        created_by:
+          type: string
+
+    CommandHistory:
+      type: object
+      required:
+        - id
+        - command_id
+        - status
+        - timestamp
+      properties:
+        id:
+          type: string
+          format: uuid
+        command_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [created, started, progress, completed, failed, expired, cancelled]
+        timestamp:
+          type: string
+          format: date-time
+        details:
+          type: object
+          nullable: true
+          properties:
+            progress:
+              type: number
+            message:
+              type: string
+            error:
+              type: string
+
+    VersionInfo:
+      type: object
+      properties:
+        version:
+          type: string
+        downloadUrl:
+          type: string
+        releaseNotes:
+          type: string
+          
+    OllamaStatus:
+      type: object
+      properties:
+        running:
+          type: boolean
+        models:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              size:
+                type: integer
+              status:
+                type: string
+
+paths:
+  /api/v1/metrics:
+    post:
+      summary: Submit system metrics
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SystemMetrics'
+      responses:
+        '200':
+          description: Metrics stored successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  node:
+                    type: string
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/metrics/nodes:
+    get:
+      summary: Get all monitored nodes
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [online, offline, warning, critical]
+        - name: platform
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of nodes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NodeSummary'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/metrics/nodes/{nodeId}:
+    get:
+      summary: Get node details
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: nodeId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Node details with latest metrics
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/NodeSummary'
+                  - type: object
+                    properties:
+                      latestCpuMetrics:
+                        type: object
+                      latestMemoryMetrics:
+                        type: object
+        '404':
+          description: Node not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/metrics/cpu:
+    get:
+      summary: Get CPU metrics for a node
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: node_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: start_time
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: end_time
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: interval
+          in: query
+          schema:
+            type: string
+            description: Time interval for aggregation (e.g., 5m, 1h, 1d)
+        - name: fields
+          in: query
+          schema:
+            type: string
+            description: Comma-separated list of fields to include
+      responses:
+        '200':
+          description: CPU metrics time series
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/nodes:
+    get:
+      summary: Get all monitored nodes
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: List of nodes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NodeSummary'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/nodes/{hostname}:
+    get:
+      summary: Get node details
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: hostname
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Node details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  node:
+                    $ref: '#/components/schemas/NodeSummary'
+                  metrics:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SystemMetrics'
+        '404':
+          description: Node not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/nodes/{hostname}/metrics:
+    get:
+      summary: Get node metrics
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: hostname
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: resolution
+          in: query
+          schema:
+            type: string
+            enum: [raw, minute, hour, day]
+            default: hour
+      responses:
+        '200':
+          description: Node metrics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SystemMetrics'
+        '404':
+          description: Node not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/status:
+    get:
+      summary: Get system status
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: System status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [healthy, warning, critical]
+                  nodes:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      online:
+                        type: integer
+                      warning:
+                        type: integer
+                      critical:
+                        type: integer
+                  alerts:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        node:
+                          type: string
+                        severity:
+                          type: string
+                        message:
+                          type: string
+                        timestamp:
+                          type: string
+                          format: date-time
+
+  /api/v1/commands:
+    post:
+      summary: Create a new command
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - nodeHostname
+                - type
+                - params
+              properties:
+                nodeHostname:
+                  type: string
+                type:
+                  type: string
+                  enum: [START_OLLAMA, PULL_MODEL, LOAD_MODEL]
+                params:
+                  type: object
+                priority:
+                  type: integer
+      responses:
+        '201':
+          description: Command created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Command'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/commands/{commandId}:
+    get:
+      summary: Get command details
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: commandId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Command details with history
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Command'
+                  - type: object
+                    properties:
+                      history:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/CommandHistory'
+        '404':
+          description: Command not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/commands/{commandId}/cancel:
+    post:
+      summary: Cancel a command
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: commandId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Command cancelled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Command'
+        '404':
+          description: Command not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/commands/{commandId}/retry:
+    post:
+      summary: Retry a failed command
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: commandId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Command queued for retry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Command'
+        '404':
+          description: Command not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/v1/nodes/{hostname}/commands/pending:
+    get:
+      summary: Get pending commands for a node
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: hostname
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of pending commands
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Command'
+
+  /api/v1/nodes/{hostname}/commands/{commandId}/status:
+    post:
+      summary: Update command status
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: hostname
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: commandId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [processing, completed, failed]
+                details:
+                  type: object
+                  properties:
+                    progress:
+                      type: number
+                    message:
+                      type: string
+                    error:
+                      type: string
+      responses:
+        '200':
+          description: Command status updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Command'
+        '404':
+          description: Command not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+                
+  /api/v1/version:
+    get:
+      summary: Get application version information
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Version information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VersionInfo'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+                
+  /api/v1/version/download:
+    get:
+      summary: Download the latest version package
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Binary package download
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '501':
+          description: Not implemented
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+                
+  /api/v1/ollama/status:
+    get:
+      summary: Get Ollama service status
+      security:
+        - ApiKeyAuth: []
+      responses:
+        '200':
+          description: Ollama status information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OllamaStatus'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error' 

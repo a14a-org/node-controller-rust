@@ -1,0 +1,31 @@
+# Generated files
+/target/
+**/*.rs.bk
+Cargo.lock
+
+# Environment variables
+.env
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# macOS files
+.DS_Store
+
+# Logs
+*.log
+*_log.log
+*_debug.log
+trace_*.log
+debug_*.log
+timing_*.log
+api_*.log
+node-controller.log
+
+# Temporary files
+*.tmp
+*.temp
+``` 
