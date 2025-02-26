@@ -19,6 +19,13 @@ dotenv = "0.15.0"  # For loading .env files
 futures-util = "0.3"  # For working with futures
 tempfile = "3.8"  # For temporary files
 dirs = "5.0"  # For finding user directories
+hostname = "0.3.1"  # For getting the system hostname
+
+# Node discovery and communication dependencies
+mdns-sd = "0.9.1"  # For mDNS service discovery
+if-addrs = "0.7.0"  # For network interface detection
+local-ip-address = "0.5.6"  # For determining local IP addresses
+async-trait = "0.1.77"  # For async traits
 
 [profile.release]
 opt-level = 3
