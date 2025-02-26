@@ -1,13 +1,13 @@
 # macOS Installation Guide for Node Controller
 
-This guide provides instructions for installing and running the Node Controller as a system service on macOS.
+This guide provides instructions for installing and running the Node Controller on macOS.
 
 ## Prerequisites
 
 - macOS 11.0 or higher (Big Sur or newer)
 - Command Line Tools for Xcode: `xcode-select --install`
 - Rust toolchain: [Install Rust](https://www.rust-lang.org/tools/install)
-- Apple Silicon Mac (M1/M2/M3)
+- Apple Silicon Mac recommended (Intel Macs are supported but some features are optimized for Apple Silicon)
 
 ## Installation Steps
 
@@ -20,86 +20,71 @@ cd node-controller-rust
 
 ### 2. Automated Installation
 
-The simplest way to install is using the provided installation script:
+The simplest way to install is using the provided deployment script:
 
 ```bash
-sudo ./install.sh
+./deploy.sh
 ```
 
 The script will:
-- Check system requirements
+- Check system compatibility (macOS and architecture)
+- Verify Rust installation
+- Create or update the `.env` configuration file
 - Build the application
-- Install it as a system service
-- Prompt for your monitoring API credentials
-- Configure automatic startup
-- Create necessary directories and set permissions
+- Install the `node-monitor` control script
+- Start the Node Controller application
+- Provide instructions for managing the service
 
-### 3. Manual Installation (Alternative)
-
-If you prefer to install manually, follow these steps:
-
-#### 3.1 Build the Application
+To make the control script available system-wide:
 
 ```bash
-cargo build --release
+./deploy.sh --symlink
 ```
 
-#### 3.2 Create Installation Directories
+### 3. Using the Node Monitor Control Script
+
+The `node-monitor` script provides a convenient way to manage the Node Controller:
 
 ```bash
-# Create directories
-sudo mkdir -p /usr/local/bin
-sudo mkdir -p /usr/local/etc/node-controller
-sudo mkdir -p /Library/Logs/NodeController
+./node-monitor status   # Check if the service is running
+./node-monitor start    # Start the service
+./node-monitor stop     # Stop the service
+./node-monitor restart  # Restart the service
+./node-monitor logs     # View the last 50 lines of logs
+./node-monitor logs 100 # View the last 100 lines of logs
+./node-monitor logs -f  # Follow logs in real-time
+./node-monitor update   # Check for and apply updates
 ```
 
-#### 3.3 Copy Files
+If you installed with the `--symlink` option, you can use the script from anywhere:
 
 ```bash
-# Copy the executable
-sudo cp target/release/node-controller-rust /usr/local/bin/
-
-# Copy the launchd plist file
-sudo cp org.a14a.node-controller.plist /Library/LaunchDaemons/
-
-# Create configuration directory and .env file
-sudo cp .env.example /usr/local/etc/node-controller/.env
+node-monitor status   # Check status from any directory
 ```
 
-#### 3.4 Configure the Application
+## Configuration
 
-Edit the environment file with your API credentials:
+The Node Controller is configured using a `.env` file in the project directory. This file is created or updated during the deployment process with your input.
 
-```bash
-sudo nano /usr/local/etc/node-controller/.env
-```
+Key configuration options include:
 
-Add the following content (replace with your actual API key):
-
+### Monitoring API Configuration
 ```
 MONITORING_API_URL=https://node-metrics.a14a.org
 MONITORING_API_KEY=your-api-key
-RUST_LOG=info
 ```
 
-#### 3.5 Set Proper Permissions
-
-```bash
-# Set ownership and permissions
-sudo chown root:wheel /Library/LaunchDaemons/org.a14a.node-controller.plist
-sudo chmod 644 /Library/LaunchDaemons/org.a14a.node-controller.plist
-sudo chown root:wheel /usr/local/bin/node-controller-rust
-sudo chmod 755 /usr/local/bin/node-controller-rust
+### Logging Configuration
+```
+RUST_LOG=info  # Options: error, warn, info, debug, trace
 ```
 
-#### 3.6 Load and Start the Service
-
-```bash
-# Load the service
-sudo launchctl load /Library/LaunchDaemons/org.a14a.node-controller.plist
-
-# Start the service
-sudo launchctl start org.a14a.node-controller
+### Auto-Update Configuration
+```
+AUTO_UPDATE=true                            # Enable/disable automatic updates
+UPDATE_CHANNEL=stable                       # Options: stable, beta, nightly
+UPDATE_CHECK_INTERVAL=60                    # Interval in minutes
+UPDATE_REPOSITORY=a14a-org/node-controller-rust  # GitHub repository
 ```
 
 ## Auto-Update Feature
@@ -113,83 +98,88 @@ The Node Controller includes an automatic update system that:
 - Automatically rolls back in case of failed updates
 - Can be configured to notify only (without auto-updating)
 
-The update system uses GitHub releases tagged with specific release channels (stable, beta), allowing you to control which updates are applied to your system.
+The update system uses GitHub releases tagged with specific release channels (stable, beta, nightly), allowing you to control which updates are applied to your system.
 
 ## Verifying Installation
 
 Check if the service is running:
 
 ```bash
-sudo launchctl list | grep org.a14a.node-controller
+./node-monitor status
 ```
 
 Check the log file:
 
 ```bash
-tail -f /Library/Logs/NodeController/node-controller.log
-```
-
-## Managing the Service
-
-### Using the CLI Tool
-
-The node-monitor tool provides a convenient way to manage the service:
-
-```bash
-node-monitor status  # Check service status
-node-monitor start   # Start the service
-node-monitor stop    # Stop the service
-node-monitor restart # Restart the service
-node-monitor logs    # View logs
-```
-
-### Manual Service Management
-
-```bash
-# Stop the service
-sudo launchctl stop org.a14a.node-controller
-
-# Unload the service
-sudo launchctl unload /Library/LaunchDaemons/org.a14a.node-controller.plist
-
-# Reload and restart the service
-sudo launchctl unload /Library/LaunchDaemons/org.a14a.node-controller.plist
-sudo launchctl load /Library/LaunchDaemons/org.a14a.node-controller.plist
-```
-
-## Uninstallation
-
-To completely remove the Node Controller:
-
-```bash
-# Use the uninstall script (recommended)
-sudo ./uninstall.sh
-
-# Or manually:
-sudo launchctl unload /Library/LaunchDaemons/org.a14a.node-controller.plist
-sudo rm /Library/LaunchDaemons/org.a14a.node-controller.plist
-sudo rm -rf /Applications/NodeController
-sudo rm -rf /Library/NodeController
-sudo rm /usr/local/bin/node-monitor
+./node-monitor logs -f
 ```
 
 ## Troubleshooting
 
 ### Service Not Starting
 
-Check the system log for launchd-related errors:
+Check the logs for any error messages:
 
 ```bash
-sudo log show --predicate 'subsystem == "com.apple.launchd"' --last 1h
+./node-monitor logs
 ```
+
+Common issues include:
+- Missing or incorrect API credentials
+- Insufficient permissions
+- Missing dependencies
 
 ### Permission Issues
 
-Ensure all files have the correct ownership and permissions as specified in the installation steps.
+Ensure that the user running the application has the necessary permissions to access system resources.
 
 ### API Connection Issues
 
 Verify that the API URL and key in the `.env` file are correct and that the Mac has internet connectivity to reach the API endpoint.
+
+## Updating the Application
+
+The Node Controller can check for and apply updates automatically:
+
+```bash
+./node-monitor update
+```
+
+This will check for updates and, if the `AUTO_UPDATE` setting is enabled in your `.env` file, apply them automatically.
+
+## Uninstallation
+
+To completely remove the Node Controller:
+
+1. Stop the service:
+   ```bash
+   ./node-monitor stop
+   ```
+
+2. If you created a system-wide symlink, remove it:
+   ```bash
+   sudo rm /usr/local/bin/node-monitor
+   ```
+
+3. Remove the project directory:
+   ```bash
+   cd ..
+   rm -rf node-controller-rust
+   ```
+
+## Advanced Usage
+
+### Dry Run Mode
+
+To test the deployment script without building or starting the service:
+
+```bash
+./deploy.sh --dry-run
+```
+
+### Custom Log Location
+
+You can modify the log file location in the `node-monitor` script by editing the `LOG_FILE` variable.
 
 ## Author
 
