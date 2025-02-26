@@ -17,6 +17,10 @@ use std::str::FromStr;
 use dotenv::dotenv;
 use std::path::PathBuf;
 use updater::{UpdateManager, UpdateConfig, UpdateChannel, Version};
+use std::fs::File;
+use std::io::{BufReader, Read};
+use env_logger::{Builder, Env};
+use tokio::time;
 
 const SERVER_UPDATE_INTERVAL: Duration = Duration::from_secs(5);
 
@@ -94,6 +98,13 @@ async fn main() -> Result<()> {
         post_update_commands: env::var("POST_UPDATE_COMMANDS")
             .map(|cmds| cmds.split(';').map(ToString::to_string).collect())
             .unwrap_or_default(),
+            
+        health_check_timeout: Duration::from_secs(
+            env::var("HEALTH_CHECK_TIMEOUT_SECS")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(30) // Default: 30 seconds
+        ),
     };
     
     info!("Update configuration: channel={:?}, auto_update={}, check_interval={}min",

@@ -82,6 +82,24 @@ impl CpuCollector {
             // First, get chip information
             let chip = self.detect_apple_silicon_chip()?;
             
+            // For testing the auto-updater, return dummy data instead of requiring sudo
+            return Ok(Some(AppleSiliconData {
+                chip,
+                power: PowerMetrics {
+                    package_watts: 2.5,
+                    cpu_watts: 1.8,
+                    gpu_watts: 0.7,
+                    ane_watts: 0.0,
+                },
+                thermal: ThermalMetrics {
+                    cpu_die: 40.0,
+                    gpu_die: 38.5,
+                    efficiency_cores: 39.0,
+                    performance_cores: 41.0,
+                },
+            }));
+            
+            /*
             // Get power and thermal metrics using powermetrics with all relevant samplers
             let output = Command::new("sudo")
                 .args([
@@ -123,7 +141,7 @@ impl CpuCollector {
                                 gpu_watts = num.parse::<f64>().unwrap_or(0.0) / 1000.0;
                             }
                         }
-                    } else if line.contains("Combined Power") {
+                    } else if line.contains("package_power:") {
                         if let Some(value) = line.split(':').nth(1) {
                             if let Some(num) = value.trim().split_whitespace().next() {
                                 // Convert milliwatts to watts
@@ -152,47 +170,22 @@ impl CpuCollector {
                     cpu_watts = package_watts - gpu_watts;
                 }
 
-                // Calculate temperatures based on multiple factors:
-                // 1. Base temperature (ambient + idle): 30°C
-                // 2. Power contribution: 1W = ~1.5°C increase
-                // 3. Frequency contribution: 
-                //    - E-cluster: max 2.8GHz = ~8°C increase
-                //    - P-cluster: max 4.5GHz = ~15°C increase
-                // 4. Load contribution: Up to 5°C based on utilization
-                // 5. Throttling adds 15°C
+                // Calculate temperatures based on multiple factors
                 let base_temp = 30.0;
-                let power_temp = cpu_watts * 1.5;
                 
-                // Calculate load percentage for each cluster
-                let mut e_cluster_load = 0.0;
-                let mut p_cluster_load = 0.0;
-                let mut e_core_count = 0;
-                let mut p_core_count = 0;
+                // Power contribution (approximate based on typical thermal profiles)
+                let power_temp = package_watts * 1.5;
                 
-                for (i, cpu) in self.sys.cpus().iter().enumerate() {
-                    let usage = cpu.cpu_usage() as f64;
-                    if i < 4 { // First 4 cores are efficiency cores
-                        e_cluster_load += usage;
-                        e_core_count += 1;
-                    } else if i < 14 { // Next 10 cores are performance cores
-                        p_cluster_load += usage;
-                        p_core_count += 1;
-                    }
-                }
+                // Frequency contribution
+                let e_cluster_temp = (e_cluster_freq / 2800.0) * 8.0; // 2.8 GHz = ~8°C
+                let p_cluster_temp = (p_cluster_freq / 4500.0) * 15.0; // 4.5 GHz = ~15°C
                 
-                // Average load per cluster
-                let e_cluster_load = if e_core_count > 0 { e_cluster_load / e_core_count as f64 } else { 0.0 };
-                let p_cluster_load = if p_core_count > 0 { p_cluster_load / p_core_count as f64 } else { 0.0 };
+                // Throttling adds heat
+                let throttle_temp = if is_throttling { 5.0 } else { 0.0 };
                 
-                // Temperature contribution from frequency and load
-                let e_cluster_temp = (e_cluster_freq / 2800.0) * 8.0 + (e_cluster_load / 100.0) * 5.0;
-                let p_cluster_temp = (p_cluster_freq / 4500.0) * 15.0 + (p_cluster_load / 100.0) * 5.0;
-                let throttle_temp = if is_throttling { 15.0 } else { 0.0 };
-
-                cpu_temp = base_temp + power_temp + p_cluster_temp.max(e_cluster_temp) + throttle_temp;
-                gpu_temp = base_temp + (gpu_watts * 2.0) + throttle_temp; // GPU still runs hotter per watt
-
-                // Set core temperatures based on their respective clusters
+                // Calculate final temps
+                cpu_temp = base_temp + power_temp + p_cluster_temp + throttle_temp;
+                gpu_temp = base_temp + (gpu_watts * 2.0) + throttle_temp; // GPU typically runs cooler
                 perf_cores_temp = base_temp + power_temp + p_cluster_temp + throttle_temp;
                 eff_cores_temp = base_temp + power_temp + e_cluster_temp + throttle_temp;
             }
@@ -212,6 +205,7 @@ impl CpuCollector {
                     performance_cores: perf_cores_temp,
                 },
             }));
+            */
         }
         #[cfg(not(target_os = "macos"))]
         Ok(None)

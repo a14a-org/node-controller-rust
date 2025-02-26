@@ -5,6 +5,7 @@
 
 use anyhow::{Result, Context, anyhow};
 use serde::{Deserialize, Serialize};
+use std::str::FromStr;
 use crate::updater::Version;
 use log::{debug, error, info};
 
@@ -144,7 +145,7 @@ fn find_latest_release(
         let (download_url, size) = mac_asset.unwrap();
         
         // If we found a newer version, update our "latest"
-        if latest_version.is_none() || version > latest_version.as_ref().unwrap() {
+        if latest_version.is_none() || version > *latest_version.as_ref().unwrap() {
             debug!("Found newer version: {}", version);
             
             // Extract other release information

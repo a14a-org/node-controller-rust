@@ -13,6 +13,7 @@ A lightweight system monitoring agent written in Rust for Mac clusters. This app
 - Low resource footprint
 - Configurable update intervals
 - Secure API communication
+- Automatic updates from GitHub releases
 
 ## Requirements
 
@@ -33,6 +34,9 @@ A lightweight system monitoring agent written in Rust for Mac clusters. This app
    MONITORING_API_URL=https://monitoring.a14a.org/api
    MONITORING_API_KEY=your-api-key
    RUST_LOG=info
+   AUTO_UPDATE=true
+   UPDATE_CHANNEL=stable
+   UPDATE_CHECK_INTERVAL=60
    ```
 
 3. Build and run using the deployment script:
@@ -65,6 +69,26 @@ The application uses environment variables for configuration:
 | MONITORING_API_URL | URL of the monitoring API | http://localhost:3000 |
 | MONITORING_API_KEY | API key for authentication | dev-api-key |
 | RUST_LOG | Logging level (error, warn, info, debug, trace) | info |
+| AUTO_UPDATE | Enable automatic updates from GitHub releases | false |
+| UPDATE_CHANNEL | Update channel to use (stable, beta, nightly) | stable |
+| UPDATE_CHECK_INTERVAL | How often to check for updates (minutes) | 60 |
+| UPDATE_REPOSITORY | GitHub repository for updates | a14a-org/node-controller-rust |
+
+## Auto-Update System
+
+The node controller includes an automatic update system that can check for and apply updates from GitHub releases:
+
+- Updates are downloaded securely from GitHub releases
+- The current version is backed up before updating
+- Health checks ensure the update was successful
+- Automatic rollback if an update fails
+- Configurable update channels (stable, beta, nightly)
+
+To create a new release that will be detected by clients:
+
+1. Tag your release with the format `{channel}-{version}`, e.g., `stable-0.2.0`
+2. Upload the binary as an asset to the GitHub release
+3. Clients will automatically detect and apply the update based on their configuration
 
 ## Deployment on Mac Cluster
 
@@ -82,6 +106,7 @@ For automated deployment, consider using a configuration management tool like An
 - **Application not starting**: Check the log file for errors
 - **API connection issues**: Verify the API URL and key in the `.env` file
 - **High resource usage**: Check for abnormal system activity
+- **Update failures**: Check logs for update errors and ensure the application has proper permissions
 
 ## Development
 

@@ -43,6 +43,9 @@ pub struct UpdateConfig {
     
     /// Commands to run after successful update
     pub post_update_commands: Vec<String>,
+    
+    /// Timeout for health checks after an update
+    pub health_check_timeout: Duration,
 }
 
 impl Default for UpdateConfig {
@@ -55,6 +58,7 @@ impl Default for UpdateConfig {
             update_dir: PathBuf::from("/Library/NodeController/updates"),
             max_backups: 3,
             post_update_commands: vec![],
+            health_check_timeout: Duration::from_secs(30),
         }
     }
 }
@@ -191,11 +195,12 @@ impl UpdateManager {
                         
                         UpdateCommand::ApplyUpdate(release) => {
                             info!("Applying update to version {}", release.version);
+                            let version_str = release.version.clone();
                             if let Err(e) = Self::apply_update(&status, &config, release).await {
                                 error!("Update failed: {}", e);
                                 let mut s = status.lock().await;
                                 *s = UpdateStatus::UpdateFailed {
-                                    version: release.version.to_string(),
+                                    version: version_str,
                                     error: e.to_string(),
                                 };
                             }
@@ -237,7 +242,17 @@ impl UpdateManager {
         let mut s = status.lock().await;
         if let Some(release) = release {
             info!("Update available: {} -> {}", current_version, release.version);
-            *s = UpdateStatus::UpdateAvailable(release);
+            *s = UpdateStatus::UpdateAvailable(release.clone());
+            
+            // Auto-apply the update if auto_update is enabled
+            if config.auto_update {
+                info!("Auto-update is enabled, applying update to version {}", release.version);
+                // Drop the mutex lock before applying update
+                drop(s);
+                if let Err(e) = Self::apply_update(status, config, release).await {
+                    error!("Automatic update failed: {}", e);
+                }
+            }
         } else {
             debug!("No updates available. Current version: {}", current_version);
             *s = UpdateStatus::NoUpdateAvailable;
@@ -349,7 +364,7 @@ impl UpdateManager {
     }
     
     /// Apply an available update
-    pub async fn apply_update(&self, release: GithubReleaseInfo) -> Result<()> {
+    pub async fn trigger_update(&self, release: GithubReleaseInfo) -> Result<()> {
         self.update_tx.send(UpdateCommand::ApplyUpdate(release)).await
             .context("Failed to send apply update command")?;
         Ok(())
