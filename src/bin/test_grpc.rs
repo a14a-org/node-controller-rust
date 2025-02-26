@@ -31,7 +31,7 @@ async fn main() -> Result<()> {
     info!("Using port: {}", port);
     
     // Initialize node discovery
-    let discovery = NodeDiscovery::new(&node_name, Some(port))?;
+    let discovery = Arc::new(NodeDiscovery::new(&node_name, Some(port))?);
     let local_node = discovery.get_local_node();
     
     // Start the gRPC server

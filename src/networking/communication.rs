@@ -140,7 +140,7 @@ impl NodeClient {
     
     /// Send a ping to a specific node
     pub async fn ping(&self, node: &NodeInfo, message: &str, local_node: &NodeInfo) -> Result<PongResponse> {
-        let client = self.get_client(node).await?;
+        let mut client = self.get_client(node).await?;
         
         let now = SystemTime::now().duration_since(UNIX_EPOCH)
             .unwrap_or_default()
@@ -166,7 +166,7 @@ impl NodeClient {
     
     /// Check the health of a specific node
     pub async fn health_check(&self, node: &NodeInfo, local_node: &NodeInfo) -> Result<HealthCheckResponse> {
-        let client = self.get_client(node).await?;
+        let mut client = self.get_client(node).await?;
         
         let request = HealthCheckRequest {
             sender_id: local_node.id.clone(),
