@@ -59,7 +59,7 @@ pub enum TransferDirection {
 pub type ProgressCallback = Arc<dyn Fn(TransferStatus) + Send + Sync>;
 
 /// Configuration for file transfers
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct FileTransferConfig {
     /// Size of chunks to use for file transfer
     pub chunk_size: usize,
@@ -385,6 +385,11 @@ impl FileTransferManager {
         let guard = self.server_address.lock().await;
         *guard
     }
+
+    /// Get the receive directory path
+    pub fn receive_directory(&self) -> PathBuf {
+        self.config.receive_dir.clone()
+    }
 }
 
 /// Handle an incoming file transfer
@@ -457,7 +462,7 @@ async fn handle_incoming_file(
     
     // Read and process data
     let mut bytes_received = 0;
-    let mut buffer = if let Some(mut pool) = buffer_pool.try_lock() {
+    let mut buffer = if let Ok(mut pool) = buffer_pool.try_lock() {
         pool.pop().unwrap_or_else(|| vec![0u8; config.chunk_size])
     } else {
         vec![0u8; config.chunk_size]

@@ -2,7 +2,7 @@
 
 # Get node name from command line or use default
 NODE_NAME=${1:-"$(hostname)"}
-LOG_LEVEL=${2:-"info"}
+LOG_LEVEL=${2:-"warn"}
 
 echo "Starting gRPC Communication Test with name: $NODE_NAME"
 echo "Log level: $LOG_LEVEL"
@@ -52,8 +52,9 @@ if ! command -v protoc &> /dev/null; then
     fi
 fi
 
-# Set environment variables
-export RUST_LOG=$LOG_LEVEL
+# Set environment variables with custom logging filters
+# Show only important logs from our code, reduce noise from dependencies
+export RUST_LOG=warn,node_controller_rust::networking::discovery=info,node_controller_rust::networking::communication=info,test_grpc=info
 
 # Build and run the test binary
 echo "Building the test binary..."
@@ -61,6 +62,13 @@ cargo build --bin test_grpc
 if [ $? -eq 0 ]; then
     # Run the test binary
     echo "Starting the gRPC test application..."
+    echo "-------------------------------------------"
+    echo "Use the following commands:"
+    echo "  list              - List all discovered nodes"
+    echo "  ping <id> <msg>   - Send a ping to a node"
+    echo "  health <id>       - Check health of a node"
+    echo "  quit              - Exit the test utility"
+    echo "-------------------------------------------"
     ./target/debug/test_grpc $NODE_NAME
 else
     echo "Failed to build test_grpc binary."

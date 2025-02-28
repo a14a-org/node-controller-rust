@@ -32,6 +32,11 @@ tonic = "0.10"  # gRPC framework
 prost = "0.12"  # Protocol buffers implementation
 tokio-stream = { version = "0.1", features = ["net"] }  # For streaming interfaces
 
+# RDMA testing dependencies
+rdma-sys = { version = "0.3", optional = true }
+libc = "0.2"  # For system bindings
+sys-info = "0.9"
+
 [profile.release]
 opt-level = 3
 lto = true
@@ -43,4 +48,8 @@ strip = true  # Strip symbols from binary
 minimum_system_version = "11.0"
 
 [build-dependencies]
-tonic-build = "0.10"  # For compiling protocol buffers 
+tonic-build = "0.10"  # For compiling protocol buffers
+
+[features]
+# Make RDMA testing optional
+rdma = ["dep:rdma-sys"] 

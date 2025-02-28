@@ -158,3 +158,44 @@ MIT
 ## Author
 
 Developed by D.A.F. Mulder (dafmulder@gmail.com) 
+
+## File Transfer and RDMA Testing
+
+The Node Controller includes utilities for high-performance file transfers between nodes, with two implementation options:
+- Optimized TCP-based file transfer (available on all platforms)
+- RDMA-based transfer (requires compatible hardware)
+
+### Testing File Transfer Capabilities
+
+1. First, check if your system supports RDMA:
+   ```
+   ./test_rdma_compat.sh
+   ```
+   This will analyze your system and determine the best file transfer method available.
+
+2. To test the file transfer functionality between nodes:
+   
+   On the first node:
+   ```
+   # Build and start the file transfer utility
+   cargo run --bin test_file_transfer
+   ```
+
+   On the second node:
+   ```
+   # Build and start the file transfer utility
+   cargo run --bin test_file_transfer
+   ```
+
+3. Once both nodes are running the utility:
+   - Use the `list` command to discover other nodes
+   - Use `send <node_id> <file_path>` to transfer a file to another node
+   - Files are received in the system's temp directory under `node_controller_files`
+
+### File Transfer Features
+
+- **Auto-Discovery**: Nodes automatically discover each other using mDNS
+- **Multi-Stream Transfer**: Uses multiple concurrent streams for maximum throughput
+- **Progress Reporting**: Real-time progress updates during transfers
+- **Resilient Transfers**: Built-in error handling and recovery
+- **Optimized for Performance**: Uses buffer pools and other optimizations 

@@ -65,7 +65,7 @@ async fn main() -> Result<()> {
         let mut interval = tokio::time::interval(Duration::from_secs(2));
         loop {
             interval.tick().await;
-            let discovered = discovery.get_nodes().await;
+            let discovered = discovery.get_discovered_nodes();
             let mut nodes_guard = nodes_clone.lock().await;
             *nodes_guard = discovered;
         }
@@ -104,7 +104,7 @@ async fn main() -> Result<()> {
                     info!("Discovered nodes:");
                     for (i, node) in nodes_guard.iter().enumerate() {
                         info!("  {}. {} ({})", i + 1, node.name, node.id);
-                        info!("     Address: {}", node.address);
+                        info!("     Address: {}:{}", node.ip, node.port);
                     }
                 }
             }
@@ -131,8 +131,7 @@ async fn main() -> Result<()> {
                         info!("Sending file to {} ({})", node.name, node.id);
                         
                         // Construct target address for file transfer
-                        let target_addr = node.address
-                            .replace("grpc://", "")  // Remove grpc:// prefix if present
+                        let target_addr = format!("{}:{}", node.ip, node.port)
                             .parse()?;
                             
                         // Send the file
@@ -152,7 +151,7 @@ async fn main() -> Result<()> {
             }
             "status" => {
                 info!("File transfer server is running on {}", server_addr);
-                info!("Receive directory: {}", file_manager.server_address().await.unwrap());
+                info!("Receive directory: {}", file_manager.receive_directory().display());
             }
             "exit" | "quit" | "q" => {
                 info!("Shutting down...");
