@@ -65,8 +65,7 @@ impl NodeService for NodeCommunicationService {
             .unwrap_or_default()
             .as_millis() as i64;
         
-        debug!("Received ping from {} ({}): {}",
-            ping_req.sender_name, ping_req.sender_id, ping_req.message);
+        info!("📨 Received ping from '{}' with message: {}", ping_req.sender_name, ping_req.message);
         
         // Construct the pong response
         let response = PongResponse {
@@ -209,6 +208,8 @@ pub async fn start_grpc_server(
             Err(e) => error!("gRPC server error: {}", e),
         }
     });
+    
+    info!("gRPC server for node '{}' listening on {}", node_info.name, addr);
     
     Ok(())
 } 

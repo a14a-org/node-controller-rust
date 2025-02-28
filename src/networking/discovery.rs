@@ -146,8 +146,8 @@ impl NodeDiscovery {
         
         // Register the service
         self.mdns.register(service_info)?;
-        info!("Node advertised as: {}.{} on {}:{}", 
-             self.local_node.name, SERVICE_TYPE, self.local_node.ip, port);
+        info!("Node '{}' ready and advertising on {} port {}", 
+             self.local_node.name, self.local_node.ip, port);
         
         // Setup periodic re-advertising
         let mdns = self.mdns.clone();
@@ -181,6 +181,7 @@ impl NodeDiscovery {
                         if let Err(e) = mdns.register(service_info) {
                             error!("Failed to refresh service advertisement: {}", e);
                         } else {
+                            // Reduce logging - only log on debug level
                             debug!("Refreshed service advertisement");
                         }
                     },
@@ -209,8 +210,7 @@ impl NodeDiscovery {
                         if let Some(node) = NodeInfo::from_service_info(&info) {
                             // Don't add ourselves to the discovered nodes
                             if node.id != local_id {
-                                info!("Discovered node: {} ({}) at {}:{}", 
-                                     node.name, node.id, node.ip, node.port);
+                                info!("✅ Discovered node: {} ({})", node.name, node.id);
                                 let mut nodes = discovered_nodes.lock().unwrap();
                                 nodes.insert(node.id.clone(), (node, Instant::now()));
                             }
@@ -233,7 +233,7 @@ impl NodeDiscovery {
                         
                         for key in keys_to_remove {
                             if let Some((node, _)) = nodes.remove(&key) {
-                                info!("Node removed: {} ({})", node.name, node.id);
+                                info!("👋 Node removed: {} ({})", node.name, node.id);
                             }
                         }
                     },

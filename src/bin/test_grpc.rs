@@ -58,19 +58,15 @@ async fn main() -> Result<()> {
             let mut node_list = nodes_clone.lock().await;
             *node_list = nodes;
             
+            // Only print a short summary instead of debug logging each update
             if !node_list.is_empty() {
-                debug!("Updated node list: {} nodes", node_list.len());
+                info!("Active nodes: {} (Use 'list' to see details)", node_list.len());
             }
         }
     });
     
-    // Display help
-    println!("\nCommands:");
-    println!("  list              - List all discovered nodes");
-    println!("  ping <id> <msg>   - Send a ping to a node with the given ID and message");
-    println!("  health <id>       - Check health of a node with the given ID");
-    println!("  quit              - Exit the test utility");
-    println!("Press Enter to see the current node list.\n");
+    // Don't display help on startup - it's now shown in the shell script
+    println!("Node '{}' is running. Press Enter to see the node list.\n", node_name);
     
     // Input handling loop
     let input = io::stdin();
@@ -87,17 +83,16 @@ async fn main() -> Result<()> {
                 // List all discovered nodes
                 let nodes = discovered_nodes_ref.lock().await;
                 if nodes.is_empty() {
-                    println!("No nodes discovered yet.");
+                    println!("⚠️ No nodes discovered yet.");
                 } else {
                     println!("\n=== Discovered Nodes ({}) ===", nodes.len());
                     for (i, node) in nodes.iter().enumerate() {
                         println!("{}. {} ({})", i + 1, node.name, node.id);
                         println!("   Address: {}:{}", node.ip, node.port);
-                        println!("   Interface Type: {}", node.interface_type);
-                        println!("   Capabilities: {}", node.capabilities.join(", "));
-                        println!("   Version: {}", node.version);
-                        println!();
+                        // Only show essential info, reduce verbosity
+                        println!("   Type: {}", node.interface_type);
                     }
+                    println!();
                 }
             },
             Some("ping") | Some("p") => {
@@ -112,19 +107,18 @@ async fn main() -> Result<()> {
                 let nodes = discovered_nodes_ref.lock().await;
                 
                 if let Some(target_node) = nodes.iter().find(|n| n.id.starts_with(id)) {
-                    println!("Pinging node {} ({}) with message: {}", target_node.name, target_node.id, message);
+                    println!("⏳ Pinging node {} ({})...", target_node.name, target_node.id);
                     
                     match client_ref.ping(target_node, &message, &local_node_ref).await {
                         Ok(response) => {
-                            println!("\nReceived response:");
-                            println!("  From: {} ({})", response.responder_name, response.responder_id);
-                            println!("  Message: {}", response.message);
-                            println!("  Round trip time: {} ms", response.response_timestamp - response.request_timestamp);
+                            println!("✅ Response from {}:", response.responder_name);
+                            println!("   Message: {}", response.message);
+                            println!("   Round trip time: {} ms", response.response_timestamp - response.request_timestamp);
                         },
-                        Err(e) => println!("Error: {}", e),
+                        Err(e) => println!("❌ Error: {}", e),
                     }
                 } else {
-                    println!("No node found with ID starting with '{}'", id);
+                    println!("❌ No node found with ID starting with '{}'", id);
                 }
             },
             Some("health") | Some("h") => {
@@ -138,25 +132,31 @@ async fn main() -> Result<()> {
                 let nodes = discovered_nodes_ref.lock().await;
                 
                 if let Some(target_node) = nodes.iter().find(|n| n.id.starts_with(id)) {
-                    println!("Checking health of node {} ({})", target_node.name, target_node.id);
+                    println!("⏳ Checking health of node {} ({})...", target_node.name, target_node.id);
                     
                     match client_ref.health_check(target_node, &local_node_ref).await {
                         Ok(response) => {
-                            println!("\nHealth check response:");
-                            println!("  From: {} ({})", response.responder_name, response.responder_id);
-                            println!("  Status: {:?}", response.status);
+                            let status_str = match response.status {
+                                0 => "UNKNOWN",
+                                1 => "HEALTHY",
+                                2 => "DEGRADED",
+                                3 => "UNHEALTHY",
+                                _ => "INVALID",
+                            };
+                            
+                            println!("✅ Health status: {}", status_str);
                             
                             if !response.metrics.is_empty() {
-                                println!("  Metrics:");
+                                println!("   Metrics:");
                                 for (key, value) in response.metrics {
-                                    println!("    {}: {}", key, value);
+                                    println!("     {}: {}", key, value);
                                 }
                             }
                         },
-                        Err(e) => println!("Error: {}", e),
+                        Err(e) => println!("❌ Error: {}", e),
                     }
                 } else {
-                    println!("No node found with ID starting with '{}'", id);
+                    println!("❌ No node found with ID starting with '{}'", id);
                 }
             },
             Some("quit") | Some("q") | Some("exit") => {
@@ -165,7 +165,7 @@ async fn main() -> Result<()> {
             },
             Some(cmd) => {
                 println!("Unknown command: {}", cmd);
-                println!("Available commands: list, ping, health, quit");
+                println!("Try: list, ping, health, quit");
             },
         }
     }
