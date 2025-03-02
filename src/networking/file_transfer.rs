@@ -12,6 +12,8 @@ use tokio::sync::{mpsc, Mutex};
 use uuid::Uuid;
 use std::collections::HashMap;
 use serde_json;
+use std::io::BufReader;
+use sha2::{Sha256, Digest};
 
 // Constants for file transfer
 const DEFAULT_CHUNK_SIZE: usize = 1024 * 1024; // 1MB chunks
@@ -193,6 +195,25 @@ impl FileTransferManager {
         }
     }
 
+    /// Calculate SHA256 hash of a file
+    fn calculate_file_hash(path: &Path) -> Result<String> {
+        let file = File::open(path)?;
+        let mut reader = BufReader::new(file);
+        let mut hasher = Sha256::new();
+        let mut buffer = [0; 1024 * 1024]; // 1MB buffer for reading
+        
+        loop {
+            let n = reader.read(&mut buffer)?;
+            if n == 0 {
+                break;
+            }
+            hasher.update(&buffer[..n]);
+        }
+        
+        let hash = hasher.finalize();
+        Ok(format!("{:x}", hash))
+    }
+
     /// Send a file to a remote node
     pub async fn send_file<P: AsRef<Path>>(&self, path: P, target_addr: SocketAddr) -> Result<String> {
         let path = path.as_ref();
@@ -210,6 +231,11 @@ impl FileTransferManager {
             .ok_or_else(|| anyhow!("Invalid file path"))?
             .to_string_lossy()
             .to_string();
+
+        // Calculate file hash (for integrity verification)
+        let file_hash = Self::calculate_file_hash(path)
+            .with_context(|| format!("Failed to calculate hash for file {}", path.display()))?;
+        info!("File hash (SHA256): {}", file_hash);
 
         // Notify of transfer start
         if let Some(callback) = &self.config.progress_callback {
@@ -284,6 +310,7 @@ impl FileTransferManager {
             let file_id = file_id.clone();
             let file_name = file_name.clone();
             let bytes_sent = total_bytes_sent.clone();
+            let file_hash_clone = file_hash.clone();
             
             // Spawn a task for this stream
             let handle = tokio::spawn(async move {
@@ -299,6 +326,7 @@ impl FileTransferManager {
                     end_pos,
                     chunk_size,
                     bytes_sent,
+                    file_hash_clone,
                 ).await;
                 
                 if let Err(e) = &result {
@@ -446,9 +474,18 @@ async fn handle_incoming_file(
     socket.read_exact(&mut end_pos_buf).await?;
     let end_pos = u64::from_be_bytes(end_pos_buf);
     
+    // Read file hash
+    let mut hash_len_buf = [0u8; 4];
+    socket.read_exact(&mut hash_len_buf).await?;
+    let hash_len = u32::from_be_bytes(hash_len_buf) as usize;
+    
+    let mut hash_buf = vec![0u8; hash_len];
+    socket.read_exact(&mut hash_buf).await?;
+    let expected_hash = String::from_utf8(hash_buf)?;
+    
     info!(
-        "Receiving file: {} (ID: {}), size: {}B, range: {}-{}",
-        file_name, file_id, file_size, start_pos, end_pos
+        "Receiving file: {} (ID: {}), size: {}B, range: {}-{}, expected hash: {}",
+        file_name, file_id, file_size, start_pos, end_pos, expected_hash
     );
     
     // Notify of transfer start
@@ -466,6 +503,12 @@ async fn handle_incoming_file(
     // Use a file tracking mechanism for multi-part transfers
     let tracking_path = config.receive_dir.join(format!("{}.parts", file_id));
     let range_key = format!("{}-{}", start_pos, end_pos);
+    
+    // Store hash in hash tracking file
+    let hash_tracking_path = config.receive_dir.join(format!("{}.hash", file_id));
+    if !hash_tracking_path.exists() {
+        fs::write(&hash_tracking_path, &expected_hash)?;
+    }
     
     // Create or update the tracking file to indicate this part is being transferred
     {
@@ -604,10 +647,35 @@ async fn handle_incoming_file(
         
         fs::write(&tracking_path, serde_json::to_string(&parts)?)?;
         
-        // If all parts are complete, we can delete the tracking file
+        // If all parts are complete, we can verify the hash and clean up
         if all_complete {
             info!("All parts of file {} received successfully", file_name);
-            let _ = fs::remove_file(&tracking_path); // Ignore errors, this is just cleanup
+            
+            // Verify file integrity with hash
+            let hash_tracking_path = config.receive_dir.join(format!("{}.hash", file_id));
+            if hash_tracking_path.exists() {
+                let expected_hash = fs::read_to_string(&hash_tracking_path)?;
+                
+                // Calculate actual hash of the complete file
+                match FileTransferManager::calculate_file_hash(&file_path) {
+                    Ok(actual_hash) => {
+                        if actual_hash == expected_hash {
+                            info!("✅ Hash verification successful: File integrity confirmed");
+                        } else {
+                            error!("❌ Hash verification failed: File may be corrupted");
+                            error!("Expected: {}", expected_hash);
+                            error!("Actual:   {}", actual_hash);
+                        }
+                    }
+                    Err(e) => {
+                        error!("Failed to calculate hash for verification: {}", e);
+                    }
+                }
+            }
+            
+            // Clean up tracking files
+            let _ = fs::remove_file(&tracking_path);
+            let _ = fs::remove_file(&hash_tracking_path);
         } else {
             info!("Partial transfer of {}: {}/{} parts complete", 
                    file_name, 
@@ -629,6 +697,7 @@ async fn send_file_range(
     end_pos: u64,
     chunk_size: usize,
     bytes_sent_counter: Arc<Mutex<u64>>,
+    file_hash: String,
 ) -> Result<()> {
     // Connect to target
     let mut socket = TcpStream::connect(target_addr).await?;
@@ -654,6 +723,12 @@ async fn send_file_range(
     // Send range information
     socket.write_all(&start_pos.to_be_bytes()).await?;
     socket.write_all(&end_pos.to_be_bytes()).await?;
+    
+    // Send file hash for integrity verification
+    let hash_bytes = file_hash.as_bytes();
+    let hash_len = hash_bytes.len() as u32;
+    socket.write_all(&hash_len.to_be_bytes()).await?;
+    socket.write_all(hash_bytes).await?;
     
     // Seek to start position
     file.seek(SeekFrom::Start(start_pos))?;

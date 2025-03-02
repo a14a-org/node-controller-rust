@@ -20,6 +20,7 @@ futures-util = "0.3"  # For working with futures
 tempfile = "3.8"  # For temporary files
 dirs = "5.0"  # For finding user directories
 hostname = "0.3.1"  # For getting the system hostname
+sha2 = "0.10.8"  # For file hash calculation
 
 # Node discovery and communication dependencies
 mdns-sd = "0.9.1"  # For mDNS service discovery
