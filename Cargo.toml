@@ -19,6 +19,24 @@ dotenv = "0.15.0"  # For loading .env files
 futures-util = "0.3"  # For working with futures
 tempfile = "3.8"  # For temporary files
 dirs = "5.0"  # For finding user directories
+hostname = "0.3.1"  # For getting the system hostname
+sha2 = "0.10.8"  # For file hash calculation
+
+# Node discovery and communication dependencies
+mdns-sd = "0.9.1"  # For mDNS service discovery
+if-addrs = "0.7.0"  # For network interface detection
+local-ip-address = "0.5.6"  # For determining local IP addresses
+async-trait = "0.1.77"  # For async traits
+
+# gRPC communication dependencies
+tonic = "0.10"  # gRPC framework
+prost = "0.12"  # Protocol buffers implementation
+tokio-stream = { version = "0.1", features = ["net"] }  # For streaming interfaces
+
+# RDMA testing dependencies
+rdma-sys = { version = "0.3", optional = true }
+libc = "0.2"  # For system bindings
+sys-info = "0.9"
 
 [profile.release]
 opt-level = 3
@@ -28,4 +46,11 @@ panic = 'abort'
 strip = true  # Strip symbols from binary
 
 [package.metadata.macos]
-minimum_system_version = "11.0" 
+minimum_system_version = "11.0"
+
+[build-dependencies]
+tonic-build = "0.10"  # For compiling protocol buffers
+
+[features]
+# Make RDMA testing optional
+rdma = ["dep:rdma-sys"] 

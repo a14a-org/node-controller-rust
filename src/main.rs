@@ -1,6 +1,7 @@
 mod metrics;
 mod api;
 mod updater;
+mod networking;
 
 use anyhow::Result;
 use metrics::{CpuCollector, NetworkCollector, StorageCollector, SystemInfoCollector};
@@ -18,6 +19,7 @@ use dotenv::dotenv;
 use std::path::PathBuf;
 use updater::{UpdateManager, UpdateConfig, UpdateChannel, Version};
 use dirs;
+use networking::NodeDiscovery;
 
 const SERVER_UPDATE_INTERVAL: Duration = Duration::from_secs(5);
 
@@ -120,6 +122,53 @@ async fn main() -> Result<()> {
     match update_manager.start().await {
         Ok(_) => info!("Update manager started successfully"),
         Err(e) => warn!("Failed to start update manager: {}", e),
+    }
+
+    // Initialize node discovery - get hostname or use a default
+    let hostname = env::var("NODE_NAME").ok().unwrap_or_else(|| {
+        hostname::get()
+            .ok()
+            .and_then(|h| h.into_string().ok())
+            .unwrap_or_else(|| "node-controller".to_string())
+    });
+    
+    info!("Node identifier: {}", hostname);
+    
+    // Allow custom port from environment variable
+    let discovery_port = env::var("DISCOVERY_PORT")
+        .ok()
+        .and_then(|p| p.parse::<u16>().ok());
+    
+    match NodeDiscovery::new(&hostname, discovery_port) {
+        Ok(discovery) => {
+            // Start the discovery service
+            match discovery.start().await {
+                Ok(_) => {
+                    info!("Node discovery service started successfully");
+                    
+                    // Start a background task to periodically log discovered nodes
+                    let discovery_clone = discovery;
+                    tokio::spawn(async move {
+                        loop {
+                            tokio::time::sleep(Duration::from_secs(30)).await;
+                            
+                            let nodes = discovery_clone.get_discovered_nodes();
+                            if !nodes.is_empty() {
+                                info!("Currently discovered nodes ({}):", nodes.len());
+                                for (i, node) in nodes.iter().enumerate() {
+                                    info!("  {}: {} ({}) at {}:{} - interface: {}", 
+                                         i+1, node.name, node.id, node.ip, node.port, node.interface_type);
+                                }
+                            } else {
+                                debug!("No nodes discovered yet");
+                            }
+                        }
+                    });
+                },
+                Err(e) => warn!("Failed to start node discovery service: {}", e),
+            }
+        },
+        Err(e) => warn!("Failed to initialize node discovery: {}", e),
     }
 
     let running = Arc::new(AtomicBool::new(true));
