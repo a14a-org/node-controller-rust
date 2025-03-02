@@ -130,9 +130,12 @@ async fn main() -> Result<()> {
                     Some(node) => {
                         info!("Sending file to {} ({})", node.name, node.id);
                         
-                        // Construct target address for file transfer
-                        let target_addr = format!("{}:{}", node.ip, node.port)
+                        // Construct target address for file transfer using the file transfer port (7879)
+                        // instead of the discovery port
+                        let target_addr = format!("{}:{}", node.ip, 7879)
                             .parse()?;
+                            
+                        info!("Using file transfer address: {}", target_addr);
                             
                         // Send the file
                         match file_manager.send_file(file_path, target_addr).await {

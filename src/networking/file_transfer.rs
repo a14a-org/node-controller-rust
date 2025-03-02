@@ -10,6 +10,8 @@ use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{mpsc, Mutex};
 use uuid::Uuid;
+use std::collections::HashMap;
+use serde_json;
 
 // Constants for file transfer
 const DEFAULT_CHUNK_SIZE: usize = 1024 * 1024; // 1MB chunks
@@ -285,6 +287,9 @@ impl FileTransferManager {
             
             // Spawn a task for this stream
             let handle = tokio::spawn(async move {
+                let stream_name = format!("Stream {}: range {}-{}", stream_idx, start_pos, end_pos);
+                info!("Starting {}", stream_name);
+                
                 let result = send_file_range(
                     &path,
                     target,
@@ -297,7 +302,9 @@ impl FileTransferManager {
                 ).await;
                 
                 if let Err(e) = &result {
-                    error!("Error in stream {}: {}", stream_idx, e);
+                    error!("Error in {}: {}", stream_name, e);
+                } else {
+                    info!("Completed {}", stream_name);
                 }
                 
                 result
@@ -308,24 +315,35 @@ impl FileTransferManager {
 
         // Wait for all transfers to complete
         let mut success = true;
-        for handle in handles {
-            if let Err(e) = handle.await? {
-                error!("Stream task failed: {}", e);
-                success = false;
+        let mut errors = Vec::new();
+        
+        for (i, handle) in handles.into_iter().enumerate() {
+            match handle.await {
+                Ok(Ok(_)) => {
+                    // This stream completed successfully
+                }
+                Ok(Err(e)) => {
+                    success = false;
+                    errors.push(format!("Stream {} failed: {}", i, e));
+                }
+                Err(e) => {
+                    success = false;
+                    errors.push(format!("Stream {} task panicked: {}", i, e));
+                }
             }
         }
-
-        // Finish progress reporting
-        if let Some(progress_handle) = progress_task {
-            // It's ok if this fails - the task might have already completed
-            let _ = progress_handle.await;
+        
+        // Cancel progress task if it's still running
+        if let Some(handle) = progress_task {
+            handle.abort();
         }
-
-        // Calculate results
+        
+        // Calculate final statistics
         let elapsed = start_time.elapsed();
         let elapsed_secs = elapsed.as_secs_f32();
+        let bytes_sent = *total_bytes_sent.lock().await;
         let throughput = if elapsed_secs > 0.0 {
-            (file_size as f32 / elapsed_secs) / (1024.0 * 1024.0)
+            (bytes_sent as f32 / elapsed_secs) / (1024.0 * 1024.0)
         } else {
             0.0
         };
@@ -342,7 +360,7 @@ impl FileTransferManager {
             } else {
                 callback(TransferStatus::Failed {
                     file_id: file_id.clone(),
-                    error: "One or more streams failed".to_string(),
+                    error: errors.join(", "),
                 });
             }
         }
@@ -444,18 +462,53 @@ async fn handle_incoming_file(
     
     // Prepare output file
     let file_path = config.receive_dir.join(&file_name);
-    let file = Arc::new(Mutex::new(if start_pos == 0 {
-        // New file
-        File::create(&file_path)?
-    } else {
-        // Existing file for appending
-        let mut file = File::options()
-            .write(true)
-            .create(true)
-            .open(&file_path)?;
-        file.seek(SeekFrom::Start(start_pos))?;
-        file
+    
+    // Use a file tracking mechanism for multi-part transfers
+    let tracking_path = config.receive_dir.join(format!("{}.parts", file_id));
+    let range_key = format!("{}-{}", start_pos, end_pos);
+    
+    // Create or update the tracking file to indicate this part is being transferred
+    {
+        let mut parts = if tracking_path.exists() {
+            let content = fs::read_to_string(&tracking_path)?;
+            serde_json::from_str::<HashMap<String, bool>>(&content).unwrap_or_default()
+        } else {
+            HashMap::new()
+        };
+        
+        // Mark this range as in progress
+        parts.insert(range_key.clone(), false); // not completed yet
+        
+        fs::write(&tracking_path, serde_json::to_string(&parts)?)?;
+    }
+    
+    let file = Arc::new(Mutex::new({
+        // Ensure the file exists and has the right size
+        if !file_path.exists() {
+            // Create new file and set its size
+            let mut file = File::create(&file_path)?;
+            file.set_len(file_size)?;
+            file
+        } else {
+            // File exists, open for writing
+            let mut file = File::options()
+                .read(true)
+                .write(true)
+                .open(&file_path)?;
+            
+            // If file size is wrong, fix it
+            if file.metadata()?.len() != file_size {
+                file.set_len(file_size)?;
+            }
+            file
+        }
     }));
+    
+    // Seek to the correct position for this part
+    {
+        let mut file_guard = file.lock().await;
+        file_guard.seek(SeekFrom::Start(start_pos))?;
+    }
     
     // Start time for throughput calculation
     let start_time = std::time::Instant::now();
@@ -533,6 +586,35 @@ async fn handle_incoming_file(
         "File received: {} ({:.2} MB/s)",
         file_name, throughput
     );
+    
+    // Update the tracking file to mark this part as complete
+    {
+        let mut parts = if tracking_path.exists() {
+            let content = fs::read_to_string(&tracking_path)?;
+            serde_json::from_str::<HashMap<String, bool>>(&content).unwrap_or_default()
+        } else {
+            HashMap::new()
+        };
+        
+        // Mark this range as completed
+        parts.insert(range_key, true);
+        
+        // Check if all parts are complete
+        let all_complete = parts.values().all(|&complete| complete);
+        
+        fs::write(&tracking_path, serde_json::to_string(&parts)?)?;
+        
+        // If all parts are complete, we can delete the tracking file
+        if all_complete {
+            info!("All parts of file {} received successfully", file_name);
+            let _ = fs::remove_file(&tracking_path); // Ignore errors, this is just cleanup
+        } else {
+            info!("Partial transfer of {}: {}/{} parts complete", 
+                   file_name, 
+                   parts.values().filter(|&&v| v).count(),
+                   parts.len());
+        }
+    }
     
     Ok(())
 }
