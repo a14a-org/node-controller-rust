@@ -159,43 +159,89 @@ MIT
 
 Developed by D.A.F. Mulder (dafmulder@gmail.com) 
 
-## File Transfer and RDMA Testing
+## File Transfer and Node Discovery
 
-The Node Controller includes utilities for high-performance file transfers between nodes, with two implementation options:
-- Optimized TCP-based file transfer (available on all platforms)
-- RDMA-based transfer (requires compatible hardware)
+The Node Controller includes a robust system for node discovery and high-performance file transfers between nodes in a cluster:
 
-### Testing File Transfer Capabilities
+### Node Discovery
 
-1. First, check if your system supports RDMA:
+Nodes automatically discover each other using mDNS (multicast DNS) service discovery:
+
+- **Zero Configuration**: No manual setup required - nodes find each other automatically
+- **Interface Optimization**: Prioritizes fastest network interfaces (Thunderbolt > Ethernet > WiFi)
+- **Real-Time Updates**: Continuously discovers new nodes and removes stale ones
+- **Unique Identification**: Each node has a unique ID and friendly name for easy reference
+
+### High-Performance File Transfer
+
+Two implementation options are available for file transfers:
+
+1. **Optimized TCP-based Transfer** (Available on all platforms)
+   - Uses multiple parallel TCP streams for maximum throughput (default: 4 streams)
+   - Implements buffer pooling and other optimizations for high performance
+   - File integrity verification using SHA256 hash
+   - Progress reporting and throughput statistics
+
+2. **RDMA-based Transfer** (Requires compatible hardware)
+   - Leverages Remote Direct Memory Access for near line-speed transfers
+   - Bypasses CPU involvement in data movement
+   - Automatically falls back to TCP if RDMA is unavailable
+
+### Testing File Discovery and Transfer
+
+To test the node discovery and file transfer capabilities:
+
+1. Build and run the test utility on two or more nodes:
    ```
-   ./test_rdma_compat.sh
+   cargo run --bin test_file_transfer
    ```
-   This will analyze your system and determine the best file transfer method available.
 
-2. To test the file transfer functionality between nodes:
+2. Use the interactive commands to discover and transfer files:
+   ```
+   # List all discovered nodes on the network
+   > list
    
-   On the first node:
-   ```
-   # Build and start the file transfer utility
-   cargo run --bin test_file_transfer
+   # Sample output:
+   Discovered nodes:
+     1. macmini-lab3 (797c0136)
+        Address: 192.168.1.103:54321
+     2. macpro-render (58af92c1)
+        Address: 192.168.1.105:54321
+   
+   # Send a file to another node (using node ID)
+   > send 797c0136 /tmp/test_10mb.bin
+   
+   # Send a file to another node (using node name)
+   > send macpro-render /path/to/large_dataset.zip
    ```
 
-   On the second node:
+3. Monitor transfer progress:
    ```
-   # Build and start the file transfer utility
-   cargo run --bin test_file_transfer
+   ⬆️ Transfer started: large_dataset.zip (256.35 MB)
+   📊 Transfer progress: 10.0% (25.63/256.35 MB)
+   ...
+   📊 Transfer progress: 100.0% (256.35/256.35 MB)
+   ✅ Transfer completed: 256.35 MB in 5.67s (45.21 MB/s)
    ```
 
-3. Once both nodes are running the utility:
-   - Use the `list` command to discover other nodes
-   - Use `send <node_id> <file_path>` to transfer a file to another node
-   - Files are received in the system's temp directory under `node_controller_files`
+4. Received files are stored in the system's temp directory:
+   ```
+   # Default location on macOS
+   ~/Library/Application Support/NodeController/received_files/
+   
+   # Default location on Linux
+   /tmp/node_controller_files/
+   ```
 
-### File Transfer Features
+### Technical Features
 
-- **Auto-Discovery**: Nodes automatically discover each other using mDNS
-- **Multi-Stream Transfer**: Uses multiple concurrent streams for maximum throughput
-- **Progress Reporting**: Real-time progress updates during transfers
-- **Resilient Transfers**: Built-in error handling and recovery
-- **Optimized for Performance**: Uses buffer pools and other optimizations 
+The file transfer system includes several technical optimizations:
+
+- **Multi-Stream Transfers**: Divides files into ranges sent over separate TCP streams
+- **Hash Verification**: Calculates SHA256 hash to verify file integrity
+- **Partial Transfer Support**: Can resume interrupted transfers
+- **Buffer Pooling**: Reuses memory buffers to reduce allocation overhead
+- **Concurrent Streams**: Configurable number of parallel connections
+- **Progress Monitoring**: Real-time tracking of transfer progress
+
+For even higher performance on compatible hardware, the RDMA implementation can be enabled with the `rdma` feature flag 
